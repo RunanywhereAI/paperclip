@@ -1,6 +1,6 @@
 {
-  "id": "5b40e9ac-12aa-4757-aac7-36218c7500a8",
-  "prevId": "10b23b32-3586-4a30-a993-618e7d3ca893",
+  "id": "c05e85d3-4804-4f02-8be9-1360aa287099",
+  "prevId": "69e6941f-890f-43d8-af7c-2e3e24ebfcd5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4055,6 +4055,28 @@
           "isUnique": true,
           "where": "\"agent_wakeup_requests\".\"idempotency_key\" LIKE 'tool-action-response:%' AND \"agent_wakeup_requests\".\"status\" NOT IN ('skipped', 'failed', 'cancelled')",
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "agent_wakeup_requests_tree_hold_resume_uq": {
+          "name": "agent_wakeup_requests_tree_hold_resume_uq",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "idempotency_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"agent_wakeup_requests\".\"idempotency_key\" LIKE 'tree-hold-resume:%' AND \"agent_wakeup_requests\".\"status\" <> 'skipped'",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -28962,6 +28984,22 @@
           "method": "btree",
           "with": {}
         },
+        "environments_managed_plugin_environment_idx": {
+          "name": "environments_managed_plugin_environment_idx",
+          "columns": [
+            {
+              "expression": "(\"metadata\" ->> 'managedPluginEnvironment')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "jsonb_typeof(\"environments\".\"metadata\" -> 'managedPluginEnvironment') = 'string'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "environments_name_idx": {
           "name": "environments_name_idx",
           "columns": [
@@ -35053,6 +35091,28 @@
           "method": "btree",
           "with": {}
         },
+        "heartbeat_runs_tree_hold_suppression_idx": {
+          "name": "heartbeat_runs_tree_hold_suppression_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "(\"result_json\"->'treeHoldSuppression'->>'holdId')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"heartbeat_runs\".\"status\" = 'cancelled' and \"heartbeat_runs\".\"result_json\" ? 'treeHoldSuppression'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "heartbeat_runs_cost_accounting_pending_idx": {
           "name": "heartbeat_runs_cost_accounting_pending_idx",
           "columns": [
@@ -39077,6 +39137,86 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.issue_project_references": {
+      "name": "issue_project_references",
+      "schema": "",
+      "columns": {
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issue_id": {
+          "name": "issue_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_kind": {
+          "name": "source_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "issue_project_references_company_project_idx": {
+          "name": "issue_project_references_company_project_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "issue_project_references_issue_id_source_kind_source_id_project_id_pk": {
+          "name": "issue_project_references_issue_id_source_kind_source_id_project_id_pk",
+          "columns": [
+            "issue_id",
+            "source_kind",
+            "source_id",
+            "project_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "issue_project_references_source_kind_check": {
+          "name": "issue_project_references_source_kind_check",
+          "value": "\"issue_project_references\".\"source_kind\" in ('issue', 'comment', 'document', 'annotation', 'interaction', 'case', 'accepted_plan')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.issue_question_response_deliveries": {
@@ -44385,6 +44525,256 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.native_provider_artifact_references": {
+      "name": "native_provider_artifact_references",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "artifact_id": {
+          "name": "artifact_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "backup_id": {
+          "name": "backup_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "native_provider_artifact_references_artifact_idx": {
+          "name": "native_provider_artifact_references_artifact_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "artifact_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "native_provider_artifact_references_run_idx": {
+          "name": "native_provider_artifact_references_run_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "artifact_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"native_provider_artifact_references\".\"backup_id\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "native_provider_artifact_references_backup_idx": {
+          "name": "native_provider_artifact_references_backup_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "artifact_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "backup_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"native_provider_artifact_references\".\"backup_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "native_provider_artifact_references_artifact_id_native_provider_artifacts_id_fk": {
+          "name": "native_provider_artifact_references_artifact_id_native_provider_artifacts_id_fk",
+          "tableFrom": "native_provider_artifact_references",
+          "tableTo": "native_provider_artifacts",
+          "columnsFrom": [
+            "artifact_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "native_provider_artifact_references_backup_id_native_harness_backups_id_fk": {
+          "name": "native_provider_artifact_references_backup_id_native_harness_backups_id_fk",
+          "tableFrom": "native_provider_artifact_references",
+          "tableTo": "native_harness_backups",
+          "columnsFrom": [
+            "backup_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.native_provider_artifacts": {
+      "name": "native_provider_artifacts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "closure_digest": {
+          "name": "closure_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "upload_token": {
+          "name": "upload_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "descriptor": {
+          "name": "descriptor",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reference": {
+          "name": "reference",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "native_provider_artifacts_company_digest_idx": {
+          "name": "native_provider_artifacts_company_digest_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "closure_digest",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"native_provider_artifacts\".\"status\" = 'ready'",
           "concurrently": false,
           "method": "btree",
           "with": {}
